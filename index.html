@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Action Tracker</title>
+<style>
+  :root {
+    --bg: #f4f3f0;
+    --card: #ffffff;
+    --ink: #2b2b2b;
+    --muted: #7a776f;
+    --line: #e4e1da;
+    --soft: #efede8;
+    --accent: #e8743b;
+    --accent-ink: #ffffff;
+    --accent-soft: #fbe9df;
+    --red: #c8423b;
+    --red-soft: #fbeceb;
+    --done: #a8a49a;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1b1a; --card: #252523; --ink: #ecebe7; --muted: #9c998f;
+      --line: #36352f; --soft: #2e2d2a; --accent-soft: #3a2a20;
+      --red: #e2685f; --red-soft: #3a2422; --done: #77746c;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 18px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 40px 16px 80px; }
+  header h1 { font-size: 2rem; margin: 0 0 4px; letter-spacing: -.01em; }
+  header p { margin: 0 0 28px; color: var(--muted); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 22px 24px; margin-bottom: 20px;
+  }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  .stat { margin: 0; padding: 18px 22px; }
+  .stat .num { font-size: 2.2rem; font-weight: 700; line-height: 1.1; }
+  .stat .lbl { color: var(--muted); font-size: .95rem; }
+  .stat.open .num { color: var(--accent); }
+  .stat.overdue .num { color: var(--red); }
+  .stat.overdue.zero .num { color: var(--muted); }
+
+  /* Form */
+  form h2, .group h2 { font-size: 1.15rem; margin: 0 0 14px; }
+  .fields { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; align-items: end; }
+  label { display: block; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+  input[type=text], input[type=date] {
+    width: 100%; font: inherit; color: var(--ink); background: var(--soft);
+    border: 1px solid transparent; border-radius: 10px; padding: 11px 14px;
+  }
+  input:focus { outline: none; border-color: var(--accent); background: var(--card); }
+  button {
+    font: inherit; cursor: pointer; border: 0; border-radius: 10px;
+  }
+  .btn-primary {
+    background: var(--accent); color: var(--accent-ink); font-weight: 600;
+    padding: 11px 22px; white-space: nowrap;
+  }
+  .btn-primary:hover { filter: brightness(.95); }
+  .error { color: var(--red); font-size: .9rem; margin-top: 10px; min-height: 1em; }
+
+  /* Toolbar */
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin: 28px 0 14px; gap: 12px; flex-wrap: wrap; }
+  .toolbar h2 { margin: 0; font-size: 1.3rem; }
+  .toggle { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .95rem; cursor: pointer; }
+  .toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+  /* Groups */
+  .group-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex: none;
+    background: var(--accent-soft); color: var(--accent);
+    display: grid; place-items: center; font-weight: 700;
+  }
+  .group-head h2 { margin: 0; flex: 1; }
+  .pill { font-size: .85rem; color: var(--muted); background: var(--soft); padding: 3px 10px; border-radius: 999px; }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+  li.item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 12px; margin: 0 -12px; border-radius: 10px;
+    border-top: 1px solid var(--line);
+  }
+  li.item:first-child { border-top: 0; }
+  li.item.overdue { background: var(--red-soft); border-top-color: transparent; }
+  li.item.overdue + li.item { border-top-color: transparent; }
+  .check {
+    appearance: none; width: 26px; height: 26px; flex: none; margin: 0;
+    border: 2px solid var(--done); border-radius: 8px; cursor: pointer;
+    display: grid; place-items: center; background: var(--card);
+  }
+  .check:checked { background: var(--accent); border-color: var(--accent); }
+  .check:checked::after { content: ""; width: 7px; height: 13px; border: solid #fff; border-width: 0 3px 3px 0; transform: translateY(-2px) rotate(45deg); }
+  .check:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 2px; }
+  .text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .due { font-size: .9rem; color: var(--muted); white-space: nowrap; }
+  li.overdue .text, li.overdue .due { color: var(--red); }
+  li.overdue .due { font-weight: 600; }
+  li.today .due { color: var(--accent); font-weight: 600; }
+  li.done .text { text-decoration: line-through; color: var(--done); }
+  li.done .due { color: var(--done); }
+  .del {
+    background: none; color: var(--muted); width: 34px; height: 34px; font-size: 1.3rem; line-height: 1;
+    opacity: 0; transition: opacity .15s;
+  }
+  li.item:hover .del, .del:focus { opacity: 1; }
+  .del:hover { color: var(--red); background: var(--soft); }
+  @media (hover: none) { .del { opacity: 1; } }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 24px; }
+
+  @media (max-width: 640px) {
+    body { font-size: 17px; }
+    .wrap { padding-top: 24px; }
+    .fields { grid-template-columns: 1fr 1fr; }
+    .fields .f-title, .fields .f-btn { grid-column: 1 / -1; }
+    .btn-primary { width: 100%; }
+    .stats { gap: 10px; }
+    .stat { padding: 14px; }
+    .stat .num { font-size: 1.7rem; }
+    .card { padding: 18px; }
+    li.item { flex-wrap: wrap; }
+    .due { margin-left: 40px; order: 3; width: 100%; margin-top: -6px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Meeting Actions</h1>
+    <p>What we agreed, who owns it, and when it's due.</p>
+  </header>
+
+  <section class="stats" aria-label="Summary">
+    <div class="card stat open"><div class="num" id="openCount">0</div><div class="lbl">Open</div></div>
+    <div class="card stat"><div class="num" id="doneCount">0</div><div class="lbl">Done</div></div>
+    <div class="card stat overdue" id="overdueCard"><div class="num" id="overdueCount">0</div><div class="lbl">Overdue</div></div>
+  </section>
+
+  <form class="card" id="addForm" autocomplete="off">
+    <h2>Add an action</h2>
+    <div class="fields">
+      <div class="f-title">
+        <label for="title">Action</label>
+        <input type="text" id="title" placeholder="e.g. Send revised budget to finance" maxlength="200">
+      </div>
+      <div>
+        <label for="owner">Owner</label>
+        <input type="text" id="owner" placeholder="Name" list="ownerList" maxlength="60">
+        <datalist id="ownerList"></datalist>
+      </div>
+      <div>
+        <label for="due">Due date</label>
+        <input type="date" id="due">
+      </div>
+      <div class="f-btn"><button type="submit" class="btn-primary">Add</button></div>
+    </div>
+    <div class="error" id="error" role="alert"></div>
+  </form>
+
+  <div class="toolbar">
+    <h2>By owner</h2>
+    <label class="toggle"><input type="checkbox" id="showDone" checked> Show done</label>
+  </div>
+
+  <div id="groups"></div>
+</div>
+
+<script>
+(function () {
+  var KEY = 'meetingActionTracker.v1';
+  var PREF = 'meetingActionTracker.showDone';
+  var actions = load();
+  var $ = function (id) { return document.getElementById(id); };
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(actions)); } catch (e) {}
+  }
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function fmtDate(s) {
+    var p = s.split('-');
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+  }
+  function dueLabel(a, today) {
+    if (a.done) return 'Done';
+    if (a.due < today) {
+      var days = Math.round((new Date(today) - new Date(a.due)) / 864e5);
+      return 'Overdue ' + days + 'd · ' + fmtDate(a.due);
+    }
+    if (a.due === today) return 'Due today';
+    return 'Due ' + fmtDate(a.due);
+  }
+  function esc(s) {
+    return s.replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+  function normOwner(name) {
+    // Match an existing owner case-insensitively so "sam" and "Sam" share a group
+    var lower = name.toLowerCase();
+    for (var i = 0; i < actions.length; i++) if (actions[i].owner.toLowerCase() === lower) return actions[i].owner;
+    return name;
+  }
+
+  function render() {
+    var today = todayStr();
+    var showDone = $('showDone').checked;
+    var open = 0, done = 0, overdue = 0;
+    actions.forEach(function (a) {
+      if (a.done) done++; else { open++; if (a.due < today) overdue++; }
+    });
+    $('openCount').textContent = open;
+    $('doneCount').textContent = done;
+    $('overdueCount').textContent = overdue;
+    $('overdueCard').classList.toggle('zero', overdue === 0);
+
+    // Owner suggestions
+    var owners = Array.from(new Set(actions.map(function (a) { return a.owner; }))).sort(function (a, b) { return a.localeCompare(b); });
+    $('ownerList').innerHTML = owners.map(function (o) { return '<option value="' + esc(o) + '">'; }).join('');
+
+    // Group
+    var groups = {};
+    actions.forEach(function (a) {
+      if (!showDone && a.done) return;
+      (groups[a.owner] = groups[a.owner] || []).push(a);
+    });
+    var names = Object.keys(groups);
+    // Owners with overdue first, then most open, then alphabetical
+    var stat = function (n) {
+      var list = groups[n];
+      return { od: list.filter(function (a) { return !a.done && a.due < today; }).length,
+               op: list.filter(function (a) { return !a.done; }).length };
+    };
+    names.sort(function (x, y) {
+      var a = stat(x), b = stat(y);
+      return (b.od - a.od) || (b.op - a.op) || x.localeCompare(y);
+    });
+
+    if (!names.length) {
+      $('groups').innerHTML = '<div class="card empty">' +
+        (actions.length ? 'Everything is done. Nice work.' : 'No actions yet. Add the first one from your last meeting above.') +
+        '</div>';
+      return;
+    }
+
+    $('groups').innerHTML = names.map(function (name) {
+      var list = groups[name].slice().sort(function (a, b) {
+        return (a.done - b.done) || a.due.localeCompare(b.due) || a.created - b.created;
+      });
+      var s = stat(name);
+      var pill = s.op + ' open' + (s.od ? ' · ' + s.od + ' overdue' : '');
+      return '<section class="card group">' +
+        '<div class="group-head"><div class="avatar" aria-hidden="true">' + esc(name.charAt(0).toUpperCase()) + '</div>' +
+        '<h2>' + esc(name) + '</h2><span class="pill">' + pill + '</span></div>' +
+        '<ul>' + list.map(function (a) {
+          var cls = ['item'];
+          if (a.done) cls.push('done');
+          else if (a.due < today) cls.push('overdue');
+          else if (a.due === today) cls.push('today');
+          return '<li class="' + cls.join(' ') + '">' +
+            '<input type="checkbox" class="check" data-id="' + a.id + '"' + (a.done ? ' checked' : '') +
+            ' aria-label="Mark done: ' + esc(a.title) + '">' +
+            '<span class="text">' + esc(a.title) + '</span>' +
+            '<span class="due">' + dueLabel(a, today) + '</span>' +
+            '<button class="del" data-del="' + a.id + '" title="Delete" aria-label="Delete: ' + esc(a.title) + '">&times;</button>' +
+            '</li>';
+        }).join('') + '</ul></section>';
+    }).join('');
+  }
+
+  $('addForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var title = $('title').value.trim();
+    var owner = $('owner').value.trim().replace(/\s+/g, ' ');
+    var due = $('due').value;
+    var missing = [];
+    if (!title) missing.push('an action');
+    if (!owner) missing.push('an owner');
+    if (!due) missing.push('a due date');
+    if (missing.length) {
+      $('error').textContent = 'Please add ' + missing.join(', ').replace(/, ([^,]*)$/, ' and $1') + '.';
+      return;
+    }
+    $('error').textContent = '';
+    actions.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      title: title, owner: normOwner(owner), due: due, done: false, created: Date.now()
+    });
+    save(); render();
+    $('title').value = '';
+    $('title').focus(); // keep owner + date for fast entry of several actions
+  });
+
+  $('groups').addEventListener('change', function (e) {
+    var id = e.target.getAttribute('data-id');
+    if (!id) return;
+    var a = actions.find(function (x) { return x.id === id; });
+    if (a) { a.done = e.target.checked; a.doneAt = a.done ? Date.now() : null; save(); render(); }
+  });
+
+  $('groups').addEventListener('click', function (e) {
+    var id = e.target.getAttribute('data-del');
+    if (!id) return;
+    actions = actions.filter(function (x) { return x.id !== id; });
+    save(); render();
+  });
+
+  try { $('showDone').checked = localStorage.getItem(PREF) !== '0'; } catch (e) {}
+  $('showDone').addEventListener('change', function () {
+    try { localStorage.setItem(PREF, this.checked ? '1' : '0'); } catch (e) {}
+    render();
+  });
+
+  $('due').value = (function () { var d = new Date(); d.setDate(d.getDate() + 7);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+
+  // Re-check overdue status when the tab regains focus (e.g. left open overnight)
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) render(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
