@@ -114,6 +114,9 @@
   @media (hover: none) { .del { opacity: 1; } }
 
   .empty { text-align: center; color: var(--muted); padding: 40px 24px; }
+  .status { background: var(--red-soft); color: var(--red); border-radius: 10px; padding: 10px 14px; margin-bottom: 20px; font-size: .95rem; }
+  .status:empty { display: none; }
+  .btn-primary:disabled { opacity: .6; cursor: default; }
 
   @media (max-width: 640px) {
     body { font-size: 17px; }
@@ -136,6 +139,8 @@
     <h1>Meeting Actions</h1>
     <p>What we agreed, who owns it, and when it's due.</p>
   </header>
+
+  <div class="status" id="status" role="status"></div>
 
   <section class="stats" aria-label="Summary">
     <div class="card stat open"><div class="num" id="openCount">0</div><div class="lbl">Open</div></div>
@@ -172,18 +177,42 @@
   <div id="groups"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (function () {
-  var KEY = 'meetingActionTracker.v1';
+  // The publishable key is safe to ship in the page; row level security on public.actions decides access.
+  var SUPABASE_URL = 'https://xbjjmfdmdcdsyplhgqus.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_n0AeHwTE71p56PrjUav_iQ_KRpyrY7D';
+  var TABLE = 'actions';
   var PREF = 'meetingActionTracker.showDone';
-  var actions = load();
+  var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  var actions = [];
+  var loaded = false;
   var $ = function (id) { return document.getElementById(id); };
 
-  function load() {
-    try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; }
+  function fromRow(r) {
+    return { id: r.id, title: r.title, owner: r.owner, due: r.due, done: r.done,
+             doneAt: r.done_at, created: Date.parse(r.created_at) };
   }
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(actions)); } catch (e) {}
+  function setStatus(msg) { $('status').textContent = msg || ''; }
+  function fail(what, err) {
+    console.error(what, err);
+    setStatus('Could not ' + what + '. Check your connection and try again.');
+  }
+  // Insert or replace by id, so our own writes and their realtime echoes don't duplicate
+  function upsertLocal(a) {
+    var i = actions.findIndex(function (x) { return x.id === a.id; });
+    if (i === -1) actions.push(a); else actions[i] = a;
+  }
+
+  function load() {
+    return db.from(TABLE).select('*').then(function (res) {
+      if (res.error) return fail('load actions', res.error);
+      actions = res.data.map(fromRow);
+      loaded = true;
+      setStatus('');
+      render();
+    });
   }
   function todayStr() {
     var d = new Date();
@@ -249,7 +278,7 @@
 
     if (!names.length) {
       $('groups').innerHTML = '<div class="card empty">' +
-        (actions.length ? 'Everything is done. Nice work.' : 'No actions yet. Add the first one from your last meeting above.') +
+        (!loaded ? 'Loading actions…' : actions.length ? 'Everything is done. Nice work.' : 'No actions yet. Add the first one from your last meeting above.') +
         '</div>';
       return;
     }
@@ -293,28 +322,58 @@
       return;
     }
     $('error').textContent = '';
-    actions.push({
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      title: title, owner: normOwner(owner), due: due, done: false, created: Date.now()
+    var btn = this.querySelector('button[type=submit]');
+    btn.disabled = true;
+    db.from(TABLE).insert({ title: title, owner: normOwner(owner), due: due }).select().single().then(function (res) {
+      btn.disabled = false;
+      if (res.error) return fail('add the action', res.error);
+      setStatus('');
+      upsertLocal(fromRow(res.data));
+      render();
+      $('title').value = '';
+      $('title').focus(); // keep owner + date for fast entry of several actions
     });
-    save(); render();
-    $('title').value = '';
-    $('title').focus(); // keep owner + date for fast entry of several actions
   });
 
   $('groups').addEventListener('change', function (e) {
     var id = e.target.getAttribute('data-id');
     if (!id) return;
     var a = actions.find(function (x) { return x.id === id; });
-    if (a) { a.done = e.target.checked; a.doneAt = a.done ? Date.now() : null; save(); render(); }
+    if (!a) return;
+    var prev = { done: a.done, doneAt: a.doneAt };
+    a.done = e.target.checked;
+    a.doneAt = a.done ? new Date().toISOString() : null;
+    render();
+    db.from(TABLE).update({ done: a.done, done_at: a.doneAt }).eq('id', id).then(function (res) {
+      if (!res.error) return setStatus('');
+      a.done = prev.done; a.doneAt = prev.doneAt; render();
+      fail('update the action', res.error);
+    });
   });
 
   $('groups').addEventListener('click', function (e) {
     var id = e.target.getAttribute('data-del');
     if (!id) return;
     actions = actions.filter(function (x) { return x.id !== id; });
-    save(); render();
+    render();
+    db.from(TABLE).delete().eq('id', id).then(function (res) {
+      if (!res.error) return setStatus('');
+      fail('delete the action', res.error);
+      load();
+    });
   });
+
+  // Live updates from other people's browsers
+  db.channel('actions-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, function (p) {
+      if (p.eventType === 'DELETE') {
+        actions = actions.filter(function (x) { return x.id !== p.old.id; });
+      } else {
+        upsertLocal(fromRow(p.new));
+      }
+      render();
+    })
+    .subscribe();
 
   try { $('showDone').checked = localStorage.getItem(PREF) !== '0'; } catch (e) {}
   $('showDone').addEventListener('change', function () {
@@ -325,10 +384,11 @@
   $('due').value = (function () { var d = new Date(); d.setDate(d.getDate() + 7);
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
 
-  // Re-check overdue status when the tab regains focus (e.g. left open overnight)
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) render(); });
+  // Refetch when the tab regains focus: re-checks overdue status and catches changes missed while asleep
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
 
   render();
+  load();
 })();
 </script>
 </body>
