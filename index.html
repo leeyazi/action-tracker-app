@@ -162,13 +162,70 @@
     li.item { flex-wrap: wrap; }
     .due { margin-left: 40px; order: 3; width: 100%; margin-top: -6px; }
   }
+
+  /* ---------- 💩 mode (toggle in the header; on by default) ---------- */
+  header { position: relative; }
+  .theme-toggle {
+    position: absolute; top: 4px; right: 0;
+    background: var(--card); color: var(--ink); border: 1.5px solid var(--border);
+    padding: 6px 12px; font-size: .9rem; border-radius: 999px;
+  }
+  .theme-toggle:hover { border-color: var(--accent); }
+  .poop-only { display: none; }
+  :root[data-theme=poop] .poop-only { display: inline; }
+  :root[data-theme=poop] {
+    --bg: #fbf6ee;
+    --ink: #3b2a20;
+    --muted: #8a7363;
+    --line: #f0e3d2;
+    --border: #e2c6a4;
+    --soft: #f8efe3;
+    --accent: #8a5a3c;
+    --accent-soft: #f3e2cf;
+    --done: #c1ab97;
+    --shadow: 0 1px 2px rgba(120,80,40,.06), 0 4px 16px rgba(120,80,40,.08);
+  }
+  :root[data-theme=poop] body {
+    /* faint scattered 💩 wallpaper */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Ctext x='10' y='34' font-size='22' opacity='.09'%3E%F0%9F%92%A9%3C/text%3E%3Ctext x='70' y='94' font-size='16' opacity='.07'%3E%F0%9F%92%A9%3C/text%3E%3C/svg%3E");
+  }
+  :root[data-theme=poop] .theme-toggle { background: var(--accent-soft); }
+  :root[data-theme=poop] .check:checked::after {
+    content: "💩"; width: auto; height: auto; border: 0; transform: none; font-size: 15px; line-height: 1;
+  }
+  :root[data-theme=poop] .check:checked { background: var(--accent-soft); border-color: var(--accent); }
+  :root[data-theme=poop] li.overdue .due::before { content: "💩 "; }
+  :root[data-theme=poop] .empty::before { content: "💩"; display: block; font-size: 2.6rem; margin-bottom: 6px; }
+  :root[data-theme=poop] .avatar { position: relative; }
+  :root[data-theme=poop] .group-head .avatar::after {
+    content: "💩"; position: absolute; right: -6px; bottom: -6px; font-size: 14px;
+  }
+  .poop-pop {
+    position: fixed; pointer-events: none; font-size: 26px; z-index: 10;
+    animation: poop-pop .9s ease-out forwards;
+  }
+  @keyframes poop-pop {
+    0% { transform: translate(-50%, -50%) scale(.4); opacity: 0; }
+    25% { transform: translate(-50%, -90%) scale(1.2); opacity: 1; }
+    100% { transform: translate(-50%, -220%) scale(1) rotate(-12deg); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .poop-pop { display: none; } }
+  @media (max-width: 640px) {
+    .theme-toggle { position: static; margin-bottom: 12px; }
+  }
 </style>
+<script>
+  // Apply the saved theme before first paint so there's no flash
+  try { document.documentElement.setAttribute('data-theme', localStorage.getItem('meetingActionTracker.theme') || 'poop'); }
+  catch (e) { document.documentElement.setAttribute('data-theme', 'poop'); }
+</script>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>Meeting Actions</h1>
-    <p>What we agreed, who owns it, and when it's due.</p>
+    <button type="button" class="theme-toggle" id="themeToggle" aria-pressed="true">💩 mode: on</button>
+    <h1>Meeting Actions<span class="poop-only"> 💩</span></h1>
+    <p>What we agreed, who owns it, and when it's due.<span class="poop-only"> No 💩 left behind.</span></p>
   </header>
 
   <div class="userbar" id="userbar" hidden>
@@ -440,6 +497,7 @@
     var prev = { done: a.done, doneAt: a.doneAt };
     a.done = e.target.checked;
     a.doneAt = a.done ? new Date().toISOString() : null;
+    if (a.done) poopPop(e.target);
     render();
     db.from(TABLE).update({ done: a.done, done_at: a.doneAt }).eq('id', id).then(function (res) {
       if (!res.error) return setStatus('');
@@ -620,6 +678,40 @@
       });
     });
   });
+
+  /* ---------- 💩 mode ---------- */
+  var THEME = 'meetingActionTracker.theme';
+  function poopMode() { return document.documentElement.getAttribute('data-theme') === 'poop'; }
+  function syncTheme() {
+    var on = poopMode();
+    $('themeToggle').textContent = on ? '💩 mode: on' : '💩 mode: off';
+    $('themeToggle').setAttribute('aria-pressed', on);
+    // Swap the tab icon too
+    var icon = document.querySelector('link[rel=icon]');
+    if (!icon) { icon = document.createElement('link'); icon.rel = 'icon'; document.head.appendChild(icon); }
+    icon.href = on
+      ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%A9%3C/text%3E%3C/svg%3E"
+      : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%85%3C/text%3E%3C/svg%3E";
+  }
+  // A little 💩 floats up from the box when an action is ticked off
+  function poopPop(el) {
+    if (!poopMode()) return;
+    var r = el.getBoundingClientRect();
+    var p = document.createElement('span');
+    p.className = 'poop-pop';
+    p.textContent = '💩';
+    p.style.left = (r.left + r.width / 2) + 'px';
+    p.style.top = (r.top + r.height / 2) + 'px';
+    document.body.appendChild(p);
+    setTimeout(function () { p.remove(); }, 1000);
+  }
+  $('themeToggle').addEventListener('click', function () {
+    var next = poopMode() ? 'purple' : 'poop';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem(THEME, next); } catch (e) {}
+    syncTheme();
+  });
+  syncTheme();
 
   try { $('showDone').checked = localStorage.getItem(PREF) !== '0'; } catch (e) {}
   $('showDone').addEventListener('change', function () {
