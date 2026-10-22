@@ -186,30 +186,76 @@
     --shadow: 0 1px 2px rgba(120,80,40,.06), 0 4px 16px rgba(120,80,40,.08);
   }
   :root[data-theme=poop] body {
-    /* faint scattered 💩 wallpaper */
+    /* faint scattered 💩 wallpaper that slowly drifts */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Ctext x='10' y='34' font-size='22' opacity='.09'%3E%F0%9F%92%A9%3C/text%3E%3Ctext x='70' y='94' font-size='16' opacity='.07'%3E%F0%9F%92%A9%3C/text%3E%3C/svg%3E");
+    animation: poop-drift 40s linear infinite;
+    /* 💩 cursor; hotspot near the tip so clicks land where you expect */
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Ctext x='1' y='26' font-size='26'%3E%F0%9F%92%A9%3C/text%3E%3C/svg%3E") 14 4, auto;
   }
+  /* Clickable things get a bigger, tilted 💩 */
+  :root[data-theme=poop] button, :root[data-theme=poop] .check, :root[data-theme=poop] .toggle, :root[data-theme=poop] .toggle input {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ctext x='4' y='32' font-size='30' transform='rotate(-15 20 20)'%3E%F0%9F%92%A9%3C/text%3E%3C/svg%3E") 14 4, pointer;
+  }
+  /* Keep the normal text cursor in typing fields so it's clear where you're typing */
+  :root[data-theme=poop] input[type=text], :root[data-theme=poop] input[type=password], :root[data-theme=poop] input[type=date] { cursor: text; }
+  :root[data-theme=poop] button:disabled { cursor: default; }
+
   :root[data-theme=poop] .theme-toggle { background: var(--accent-soft); }
   :root[data-theme=poop] .check:checked::after {
     content: "💩"; width: auto; height: auto; border: 0; transform: none; font-size: 15px; line-height: 1;
+    animation: poop-plop .4s cubic-bezier(.3, 1.6, .5, 1);
   }
   :root[data-theme=poop] .check:checked { background: var(--accent-soft); border-color: var(--accent); }
-  :root[data-theme=poop] li.overdue .due::before { content: "💩 "; }
-  :root[data-theme=poop] .empty::before { content: "💩"; display: block; font-size: 2.6rem; margin-bottom: 6px; }
+  :root[data-theme=poop] li.overdue .due::before { content: "💩 "; display: inline-block; animation: poop-wiggle 1.2s ease-in-out infinite; }
+  :root[data-theme=poop] .empty::before { content: "💩"; display: block; font-size: 2.6rem; margin-bottom: 6px; animation: poop-bounce 1.6s ease-in-out infinite; }
   :root[data-theme=poop] .avatar { position: relative; }
   :root[data-theme=poop] .group-head .avatar::after {
     content: "💩"; position: absolute; right: -6px; bottom: -6px; font-size: 14px;
+    animation: poop-bob 2.2s ease-in-out infinite;
   }
-  .poop-pop {
-    position: fixed; pointer-events: none; font-size: 26px; z-index: 10;
-    animation: poop-pop .9s ease-out forwards;
+  :root[data-theme=poop] .group:nth-child(2n) .avatar::after { animation-delay: -.7s; }
+  :root[data-theme=poop] .group:nth-child(3n) .avatar::after { animation-delay: -1.4s; }
+
+  /* The title 💩 is a button: it wobbles, and squishes with a burst when clicked */
+  .title-poop {
+    background: none; border: 0; padding: 0 4px; font: inherit; line-height: 1;
+    vertical-align: baseline; transform-origin: 50% 90%;
   }
+  :root[data-theme=poop] .title-poop { display: inline-block; animation: poop-wobble 2.6s ease-in-out infinite; }
+  :root[data-theme=poop] .title-poop:hover { animation-duration: .8s; }
+  :root[data-theme=poop] .title-poop.squish { animation: poop-squish .45s ease-out; }
+  .title-poop:focus-visible { outline: 3px solid var(--accent-soft); border-radius: 8px; }
+  .squish-count { font-size: .85rem; color: var(--muted); font-weight: 400; margin-left: 4px; vertical-align: middle; }
+
+  .poop-pop, .poop-burst, .poop-trail, .poop-rain { position: fixed; pointer-events: none; z-index: 10; line-height: 1; }
+  .poop-pop { font-size: 26px; animation: poop-pop .9s ease-out forwards; }
+  .poop-burst { font-size: 22px; animation: poop-burst .8s ease-out forwards; }
+  .poop-trail { font-size: 12px; animation: poop-trail .7s ease-out forwards; }
+  .poop-rain { top: -40px; animation: poop-rain linear forwards; }
+
+  @keyframes poop-drift { to { background-position: 120px 240px; } }
   @keyframes poop-pop {
     0% { transform: translate(-50%, -50%) scale(.4); opacity: 0; }
     25% { transform: translate(-50%, -90%) scale(1.2); opacity: 1; }
     100% { transform: translate(-50%, -220%) scale(1) rotate(-12deg); opacity: 0; }
   }
-  @media (prefers-reduced-motion: reduce) { .poop-pop { display: none; } }
+  @keyframes poop-plop { 0% { transform: scale(0) rotate(-30deg); } 100% { transform: scale(1) rotate(0); } }
+  @keyframes poop-wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
+  @keyframes poop-bounce { 0%, 100% { transform: translateY(0) scale(1, 1); } 45% { transform: translateY(-12px) scale(.95, 1.05); } 55% { transform: translateY(-12px); } 90% { transform: translateY(0) scale(1.1, .9); } }
+  @keyframes poop-bob { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-3px) rotate(6deg); } }
+  @keyframes poop-wobble { 0%, 60%, 100% { transform: rotate(0) scale(1); } 70% { transform: rotate(-10deg) scale(1.05); } 80% { transform: rotate(8deg) scale(1.05); } 90% { transform: rotate(-4deg); } }
+  @keyframes poop-squish { 0% { transform: scale(1, 1); } 30% { transform: scale(1.35, .6); } 60% { transform: scale(.85, 1.25); } 100% { transform: scale(1, 1); } }
+  @keyframes poop-burst {
+    0% { transform: translate(-50%, -50%) scale(.3); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(var(--rot)); opacity: 0; }
+  }
+  @keyframes poop-trail { 0% { transform: translate(-50%, -50%) scale(1); opacity: .8; } 100% { transform: translate(-50%, 10px) scale(.4); opacity: 0; } }
+  @keyframes poop-rain { to { transform: translateY(calc(100vh + 80px)) rotate(var(--rot)); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root[data-theme=poop] body, :root[data-theme=poop] *, :root[data-theme=poop] *::before, :root[data-theme=poop] *::after { animation: none !important; }
+    .poop-pop, .poop-burst, .poop-trail, .poop-rain { display: none; }
+  }
   @media (max-width: 640px) {
     .theme-toggle { position: static; margin-bottom: 12px; }
   }
@@ -224,7 +270,7 @@
 <div class="wrap">
   <header>
     <button type="button" class="theme-toggle" id="themeToggle" aria-pressed="true">💩 mode: on</button>
-    <h1>Meeting Actions<span class="poop-only"> 💩</span></h1>
+    <h1>Meeting Actions <button type="button" class="title-poop poop-only" id="titlePoop" title="Squish me" aria-label="Squish the poop">💩</button><span class="squish-count poop-only" id="squishCount" aria-live="polite"></span></h1>
     <p>What we agreed, who owns it, and when it's due.<span class="poop-only"> No 💩 left behind.</span></p>
   </header>
 
@@ -497,7 +543,11 @@
     var prev = { done: a.done, doneAt: a.doneAt };
     a.done = e.target.checked;
     a.doneAt = a.done ? new Date().toISOString() : null;
-    if (a.done) poopPop(e.target);
+    if (a.done) {
+      poopPop(e.target);
+      // Last open action ticked off: make it rain
+      if (!actions.some(function (x) { return !x.done; })) poopRain();
+    }
     render();
     db.from(TABLE).update({ done: a.done, done_at: a.doneAt }).eq('id', id).then(function (res) {
       if (!res.error) return setStatus('');
@@ -693,18 +743,75 @@
       ? "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%A9%3C/text%3E%3C/svg%3E"
       : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%85%3C/text%3E%3C/svg%3E";
   }
+  var calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+  function poopFx() { return poopMode() && !calm.matches; }
+  // Drop a short-lived 💩 at (x, y); it removes itself after its animation
+  function spawnPoop(cls, x, y, style, ms) {
+    var p = document.createElement('span');
+    p.className = cls;
+    p.textContent = '💩';
+    p.setAttribute('aria-hidden', 'true');
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    for (var k in style) p.style.setProperty(k, style[k]);
+    document.body.appendChild(p);
+    setTimeout(function () { p.remove(); }, ms);
+  }
+  function centre(el) { var r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
+
   // A little 💩 floats up from the box when an action is ticked off
   function poopPop(el) {
-    if (!poopMode()) return;
-    var r = el.getBoundingClientRect();
-    var p = document.createElement('span');
-    p.className = 'poop-pop';
-    p.textContent = '💩';
-    p.style.left = (r.left + r.width / 2) + 'px';
-    p.style.top = (r.top + r.height / 2) + 'px';
-    document.body.appendChild(p);
-    setTimeout(function () { p.remove(); }, 1000);
+    if (!poopFx()) return;
+    var c = centre(el);
+    spawnPoop('poop-pop', c[0], c[1], {}, 1000);
   }
+  // A ring of 💩 flying outwards
+  function poopBurst(el, n) {
+    var c = centre(el);
+    for (var i = 0; i < n; i++) {
+      var ang = (i / n) * Math.PI * 2 + Math.random() * .4;
+      var dist = 50 + Math.random() * 40;
+      spawnPoop('poop-burst', c[0], c[1], {
+        '--dx': Math.cos(ang) * dist + 'px', '--dy': Math.sin(ang) * dist + 'px', '--rot': (Math.random() * 360 - 180) + 'deg'
+      }, 850);
+    }
+  }
+  // 💩 rain across the whole screen
+  function poopRain() {
+    if (!poopFx()) return;
+    for (var i = 0; i < 28; i++) {
+      var dur = 1.6 + Math.random() * 1.4;
+      spawnPoop('poop-rain', Math.random() * window.innerWidth, -40, {
+        'font-size': (18 + Math.random() * 22) + 'px', 'animation-duration': dur + 's',
+        'animation-delay': (Math.random() * .8) + 's', '--rot': (Math.random() * 540 - 270) + 'deg'
+      }, (dur + 1) * 1000);
+    }
+  }
+
+  // Click the title 💩 to squish it
+  var squished = 0;
+  $('titlePoop').addEventListener('click', function () {
+    var el = this;
+    squished++;
+    $('squishCount').textContent = '×' + squished;
+    if (!poopFx()) return;
+    el.classList.remove('squish');
+    void el.offsetWidth; // restart the animation on rapid clicks
+    el.classList.add('squish');
+    poopBurst(el, 8);
+    if (squished % 10 === 0) poopRain(); // every 10th squish is a bonus
+  });
+  $('titlePoop').addEventListener('animationend', function () { this.classList.remove('squish'); });
+
+  // A faint trail of tiny 💩 follows the mouse (not on touch screens)
+  var lastTrail = { x: 0, y: 0, t: 0 };
+  document.addEventListener('pointermove', function (e) {
+    if (e.pointerType !== 'mouse' || !poopFx()) return;
+    var now = Date.now();
+    if (now - lastTrail.t < 60 || Math.hypot(e.clientX - lastTrail.x, e.clientY - lastTrail.y) < 28) return;
+    lastTrail = { x: e.clientX, y: e.clientY, t: now };
+    spawnPoop('poop-trail', e.clientX + 6, e.clientY + 18, {}, 750);
+  });
   $('themeToggle').addEventListener('click', function () {
     var next = poopMode() ? 'purple' : 'poop';
     document.documentElement.setAttribute('data-theme', next);
